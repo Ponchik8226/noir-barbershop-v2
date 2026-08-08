@@ -16,7 +16,50 @@ const initialForm: FormState = {
   name: '', phone: '', service: '', master: '', date: '', time: '',
 };
 
-const timeSlots = ['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
+const timeSlots = [
+  '10:00','11:00','12:00','13:00','14:00',
+  '15:00','16:00','17:00','18:00','19:00','20:00','21:00'
+];
+
+async function sendToTelegram(form: FormState): Promise<void> {
+  const token = import.meta.env.VITE_TG_BOT_TOKEN;
+  const chatId = import.meta.env.VITE_TG_CHAT_ID;
+
+  if (!token || !chatId) {
+    throw new Error('Telegram не настроен');
+  }
+
+  const serviceName = services.find(s => s.id === form.service)?.name ?? form.service;
+  const masterName = form.master
+    ? (masters.find(m => m.id === form.master)?.name ?? form.master)
+    : 'Любой мастер';
+
+  const text = [
+    '✂️ <b>Новая заявка — NOIR Barbershop</b>',
+    '',
+    `👤 <b>Имя:</b> ${form.name}`,
+    `📞 <b>Телефон:</b> ${form.phone}`,
+    `💈 <b>Услуга:</b> ${serviceName}`,
+    `👨‍🎨 <b>Мастер:</b> ${masterName}`,
+    `📅 <b>Дата:</b> ${form.date}`,
+    `🕐 <b>Время:</b> ${form.time}`,
+  ].join('\n');
+
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: 'HTML',
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.description ?? 'Ошибка отправки');
+  }
+}
 
 export default function Booking() {
   const ref = useRef(null);
@@ -25,11 +68,13 @@ export default function Booking() {
   const [errors, setErrors] = useState<Partial<FormState>>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const validate = (): boolean => {
     const errs: Partial<FormState> = {};
     if (!form.name.trim()) errs.name = 'Введите имя';
-    if (!form.phone.trim() || !/^\+?[\d\s\-()]{10,}$/.test(form.phone)) errs.phone = 'Введите корректный номер';
+    if (!form.phone.trim() || !/^\+?[\d\s\-()]{10,}$/.test(form.phone))
+      errs.phone = 'Введите корректный номер';
     if (!form.service) errs.service = 'Выберите услугу';
     if (!form.date) errs.date = 'Выберите дату';
     if (!form.time) errs.time = 'Выберите время';
@@ -40,9 +85,15 @@ export default function Booking() {
   const handleSubmit = async () => {
     if (!validate()) return;
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1400));
-    setLoading(false);
-    setSuccess(true);
+    setSendError(null);
+    try {
+      await sendToTelegram(form);
+      setSuccess(true);
+    } catch (e) {
+      setSendError('Не удалось отправить заявку. Позвоните нам: +7 (700) 123-45-67');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (field: keyof FormState, value: string) => {
@@ -53,9 +104,11 @@ export default function Booking() {
   const today = new Date().toISOString().split('T')[0];
 
   const inputClass = (field: keyof FormState) =>
-    `w-full bg-noir-black border px-4 py-3.5 font-body text-sm text-noir-text placeholder-noir-secondary/50 
-     focus:outline-none focus:border-noir-accent transition-colors duration-200 appearance-none
-     ${errors[field] ? 'border-red-500/60' : 'border-noir-border focus:border-noir-accent/60'}`;
+    `w-full bg-noir-black border px-4 py-3.5 font-body text-sm text-noir-text
+     placeholder-noir-secondary/50 focus:outline-none transition-colors duration-200 appearance-none
+     ${errors[field]
+       ? 'border-red-500/60 focus:border-red-400'
+       : 'border-noir-border focus:border-noir-accent/60'}`;
 
   return (
     <section id="booking" className="py-24 md:py-36 bg-noir-black" ref={ref} aria-label="Форма записи NOIR">
@@ -82,7 +135,6 @@ export default function Booking() {
           </motion.h2>
         </div>
 
-        {/* Form / Success */}
         <AnimatePresence mode="wait">
           {success ? (
             <motion.div
@@ -124,7 +176,9 @@ export default function Booking() {
               <div className="grid md:grid-cols-2 gap-5">
                 {/* Name */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="font-body text-xs tracking-widest uppercase text-noir-secondary">Имя *</label>
+                  <label className="font-body text-xs tracking-widest uppercase text-noir-secondary">
+                    Имя *
+                  </label>
                   <input
                     type="text"
                     placeholder="Ваше имя"
@@ -138,7 +192,9 @@ export default function Booking() {
 
                 {/* Phone */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="font-body text-xs tracking-widest uppercase text-noir-secondary">Телефон *</label>
+                  <label className="font-body text-xs tracking-widest uppercase text-noir-secondary">
+                    Телефон *
+                  </label>
                   <input
                     type="tel"
                     placeholder="+7 (700) 000-00-00"
@@ -152,7 +208,9 @@ export default function Booking() {
 
                 {/* Service */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="font-body text-xs tracking-widest uppercase text-noir-secondary">Услуга *</label>
+                  <label className="font-body text-xs tracking-widest uppercase text-noir-secondary">
+                    Услуга *
+                  </label>
                   <select
                     value={form.service}
                     onChange={e => handleChange('service', e.target.value)}
@@ -161,7 +219,9 @@ export default function Booking() {
                   >
                     <option value="" disabled>Выберите услугу</option>
                     {services.map(s => (
-                      <option key={s.id} value={s.id}>{s.name} — {s.price}</option>
+                      <option key={s.id} value={s.id}>
+                        {s.name} — {s.price}
+                      </option>
                     ))}
                   </select>
                   {errors.service && <p className="text-red-400 text-xs">{errors.service}</p>}
@@ -169,7 +229,9 @@ export default function Booking() {
 
                 {/* Master */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="font-body text-xs tracking-widest uppercase text-noir-secondary">Мастер</label>
+                  <label className="font-body text-xs tracking-widest uppercase text-noir-secondary">
+                    Мастер
+                  </label>
                   <select
                     value={form.master}
                     onChange={e => handleChange('master', e.target.value)}
@@ -178,14 +240,18 @@ export default function Booking() {
                   >
                     <option value="">Любой мастер</option>
                     {masters.map(m => (
-                      <option key={m.id} value={m.id}>{m.name} — {m.role}</option>
+                      <option key={m.id} value={m.id}>
+                        {m.name} — {m.role}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 {/* Date */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="font-body text-xs tracking-widest uppercase text-noir-secondary">Дата *</label>
+                  <label className="font-body text-xs tracking-widest uppercase text-noir-secondary">
+                    Дата *
+                  </label>
                   <input
                     type="date"
                     min={today}
@@ -199,7 +265,9 @@ export default function Booking() {
 
                 {/* Time */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="font-body text-xs tracking-widest uppercase text-noir-secondary">Время *</label>
+                  <label className="font-body text-xs tracking-widest uppercase text-noir-secondary">
+                    Время *
+                  </label>
                   <select
                     value={form.time}
                     onChange={e => handleChange('time', e.target.value)}
@@ -215,17 +283,24 @@ export default function Booking() {
                 </div>
               </div>
 
+              {/* Send error */}
+              {sendError && (
+                <div className="mt-5 p-4 border border-red-500/30 bg-red-500/5">
+                  <p className="text-red-400 text-sm font-body">{sendError}</p>
+                </div>
+              )}
+
               <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-5">
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
                   className="btn-primary w-full sm:w-auto disabled:opacity-60 disabled:cursor-not-allowed"
-                  aria-label="Отправить заявку на запись"
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">
                       <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <circle className="opacity-25" cx="12" cy="12" r="10"
+                          stroke="currentColor" strokeWidth="4"/>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                       </svg>
                       Отправляем...
