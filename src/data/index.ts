@@ -173,7 +173,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     id: 'g5',
-    src: 'https://images.unsplash.com/photo-1621605814971-fbc98d665033?w=800&q=85',
+    src: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=85',
     alt: 'Slick back стрижка',
     tag: 'Slick Back',
     span: 'normal',
@@ -210,7 +210,7 @@ export const instagramPosts = [
   },
   {
     id: 'ig5',
-    src: 'https://images.unsplash.com/photo-1621605814971-fbc98d665033?w=500&q=80',
+    src: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=500&q=80',
     alt: 'NOIR barbershop work',
   },
   {
