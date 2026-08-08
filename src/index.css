@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply bg-noir-black text-noir-text font-body;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: #C9A96E33;
+    color: #E8E4DC;
+  }
+
+  :focus-visible {
+    outline: 1px solid #C9A96E;
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-noir-accent text-noir-black font-body font-500 text-sm tracking-widest uppercase transition-all duration-300 hover:bg-noir-text hover:text-noir-black;
+  }
+  
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-7 py-3.5 border border-noir-text/30 text-noir-text font-body text-sm tracking-widest uppercase transition-all duration-300 hover:border-noir-text hover:bg-noir-text/5;
+  }
+
+  .section-label {
+    @apply text-noir-accent font-body text-xs tracking-widest3 uppercase;
+  }
+
+  .display-heading {
+    @apply font-display font-light leading-none tracking-tight;
+  }
+}
+
+@layer utilities {
+  .font-500 { font-weight: 500; }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
