@@ -1,13 +1,99 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { MapPin, Clock, Phone, Navigation } from 'lucide-react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Custom dark marker SVG
+const markerSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">
+  <path d="M16 0C7.16 0 0 7.16 0 16c0 11 16 26 16 26S32 27 32 16C32 7.16 24.84 0 16 0z" fill="#C9A96E"/>
+  <circle cx="16" cy="16" r="7" fill="#0A0A0A"/>
+</svg>`;
+
+const markerIcon = typeof window !== 'undefined'
+  ? L.divIcon({
+      html: markerSvg,
+      className: '',
+      iconSize: [32, 42],
+      iconAnchor: [16, 42],
+      popupAnchor: [0, -44],
+    })
+  : undefined;
 
 export default function Location() {
   const ref = useRef(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const leafletMap = useRef<L.Map | null>(null);
   const inView = useInView(ref, { once: true, margin: '-8%' });
+
+  // Coordinates: ул. Панфилова, Алматы
+  const LAT = 43.2567;
+  const LNG = 76.9286;
+
+  useEffect(() => {
+    if (!mapRef.current || leafletMap.current) return;
+
+    const map = L.map(mapRef.current, {
+      center: [LAT, LNG],
+      zoom: 16,
+      zoomControl: false,
+      scrollWheelZoom: false, // disable scroll zoom to not hijack page scroll; user can enable via click
+    });
+
+    // Dark OpenStreetMap tile layer (Stadia dark theme - free, no key needed)
+    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
+      attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>',
+      maxZoom: 20,
+    }).addTo(map);
+
+    // Zoom control bottom-right
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Marker
+    if (markerIcon) {
+      L.marker([LAT, LNG], { icon: markerIcon })
+        .addTo(map)
+        .bindPopup(
+          '<div style="font-family:sans-serif;font-size:13px;color:#0A0A0A;padding:2px 4px"><strong>NOIR Barbershop</strong><br>ул. Панфилова, 123</div>'
+        )
+        .openPopup();
+    }
+
+    // Enable scroll zoom on click/focus
+    map.on('click', () => { map.scrollWheelZoom.enable(); });
+    map.on('blur', () => { map.scrollWheelZoom.disable(); });
+
+    leafletMap.current = map;
+
+    return () => {
+      map.remove();
+      leafletMap.current = null;
+    };
+  }, []);
 
   return (
     <section id="location" className="py-24 md:py-36 bg-noir-dark" ref={ref} aria-label="Адрес и контакты NOIR">
+      {/* Leaflet CSS overrides for dark theme */}
+      <style>{`
+        .leaflet-container { background: #111; }
+        .leaflet-popup-content-wrapper { border-radius: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .leaflet-popup-tip { background: #fff; }
+        .leaflet-control-zoom a {
+          background: #181818 !important;
+          color: #C9A96E !important;
+          border-color: #242424 !important;
+          border-radius: 0 !important;
+        }
+        .leaflet-control-zoom a:hover { background: #242424 !important; }
+        .leaflet-control-attribution {
+          background: rgba(10,10,10,0.7) !important;
+          color: #555 !important;
+          font-size: 10px;
+        }
+        .leaflet-control-attribution a { color: #777 !important; }
+      `}</style>
+
       <div className="max-w-7xl mx-auto px-5 md:px-8">
         {/* Header */}
         <div className="mb-16 md:mb-20">
@@ -37,7 +123,6 @@ export default function Location() {
             transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="flex flex-col gap-8"
           >
-            {/* Address */}
             <div className="flex gap-5 items-start border-b border-noir-border pb-8">
               <MapPin size={20} className="text-noir-accent mt-0.5 shrink-0" strokeWidth={1.5} />
               <div>
@@ -47,7 +132,6 @@ export default function Location() {
               </div>
             </div>
 
-            {/* Hours */}
             <div className="flex gap-5 items-start border-b border-noir-border pb-8">
               <Clock size={20} className="text-noir-accent mt-0.5 shrink-0" strokeWidth={1.5} />
               <div>
@@ -57,7 +141,6 @@ export default function Location() {
               </div>
             </div>
 
-            {/* Phone */}
             <div className="flex gap-5 items-start border-b border-noir-border pb-8">
               <Phone size={20} className="text-noir-accent mt-0.5 shrink-0" strokeWidth={1.5} />
               <div>
@@ -71,14 +154,12 @@ export default function Location() {
               </div>
             </div>
 
-            {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
               <a
-                href="https://maps.google.com"
+                href={`https://www.openstreetmap.org/directions?to=${LAT},${LNG}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary inline-flex items-center gap-2 justify-center"
-                aria-label="Построить маршрут"
               >
                 <Navigation size={15} />
                 Маршрут
@@ -86,7 +167,6 @@ export default function Location() {
               <a
                 href="tel:+77001234567"
                 className="btn-outline inline-flex items-center gap-2 justify-center"
-                aria-label="Позвонить в NOIR"
               >
                 <Phone size={15} />
                 Позвонить
@@ -94,55 +174,14 @@ export default function Location() {
             </div>
           </motion.div>
 
-          {/* Mock map */}
+          {/* Real Leaflet map */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="relative aspect-[4/3] bg-noir-card border border-noir-border overflow-hidden"
-            aria-label="Карта расположения NOIR Barbershop"
+            className="relative aspect-[4/3] border border-noir-border overflow-hidden"
           >
-            {/* SVG mock map */}
-            <svg viewBox="0 0 480 360" className="w-full h-full" aria-hidden="true">
-              {/* Background */}
-              <rect width="480" height="360" fill="#181818"/>
-
-              {/* Block fills */}
-              <rect x="0" y="0" width="140" height="100" fill="#1e1e1e"/>
-              <rect x="160" y="0" width="160" height="80" fill="#1e1e1e"/>
-              <rect x="340" y="0" width="140" height="120" fill="#1e1e1e"/>
-              <rect x="0" y="120" width="100" height="120" fill="#1e1e1e"/>
-              <rect x="120" y="100" width="120" height="100" fill="#1e1e1e"/>
-              <rect x="260" y="140" width="100" height="80" fill="#1e1e1e"/>
-              <rect x="370" y="130" width="110" height="100" fill="#1e1e1e"/>
-              <rect x="0" y="260" width="160" height="100" fill="#1e1e1e"/>
-              <rect x="180" y="240" width="140" height="120" fill="#1e1e1e"/>
-              <rect x="340" y="250" width="140" height="110" fill="#1e1e1e"/>
-
-              {/* Streets */}
-              <rect x="140" y="0" width="20" height="360" fill="#242424"/>
-              <rect x="320" y="0" width="20" height="360" fill="#242424"/>
-              <rect x="0" y="100" width="480" height="20" fill="#242424"/>
-              <rect x="0" y="230" width="480" height="20" fill="#242424"/>
-
-              {/* Street labels */}
-              <text x="148" y="65" font-family="sans-serif" font-size="8" fill="#3a3a3a" writing-mode="tb">ул. Панфилова</text>
-              <text x="328" y="60" font-family="sans-serif" font-size="8" fill="#3a3a3a" writing-mode="tb">ул. Байсеитовой</text>
-              <text x="60" y="114" font-family="sans-serif" font-size="8" fill="#3a3a3a">пр. Достык</text>
-              <text x="370" y="244" font-family="sans-serif" font-size="8" fill="#3a3a3a">ул. Кабанбай батыра</text>
-
-              {/* Marker */}
-              <circle cx="150" cy="110" r="18" fill="#C9A96E22" stroke="#C9A96E" strokeWidth="1.5"/>
-              <circle cx="150" cy="110" r="5" fill="#C9A96E"/>
-
-              {/* Label */}
-              <rect x="162" y="94" width="80" height="32" rx="2" fill="#0A0A0A" stroke="#2a2a2a" strokeWidth="1"/>
-              <text x="170" y="107" font-family="sans-serif" font-size="9" font-weight="600" fill="#C9A96E">NOIR</text>
-              <text x="170" y="120" font-family="sans-serif" font-size="7" fill="#8A8680">ул. Панфилова, 123</text>
-            </svg>
-
-            {/* Subtle vignette */}
-            <div className="absolute inset-0 shadow-[inset_0_0_40px_rgba(10,10,10,0.6)] pointer-events-none" />
+            <div ref={mapRef} className="w-full h-full" aria-label="Карта расположения NOIR Barbershop" />
           </motion.div>
         </div>
       </div>
