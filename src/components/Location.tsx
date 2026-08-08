@@ -156,7 +156,7 @@ export default function Location() {
 
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
               <a
-                href={`https://www.openstreetmap.org/directions?to=${LAT},${LNG}`}
+                href={`https://www.google.com/maps?q=${LAT},${LNG}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary inline-flex items-center gap-2 justify-center"
