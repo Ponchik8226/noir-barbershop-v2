@@ -42,9 +42,9 @@ export default function Location() {
     });
 
     // Dark OpenStreetMap tile layer (Stadia dark theme - free, no key needed)
-    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
-      attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>',
-      maxZoom: 20,
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+      maxZoom: 19,
     }).addTo(map);
 
     // Zoom control bottom-right
